@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
 import { useNavigation } from '@react-navigation/native';
@@ -151,9 +151,7 @@ const Class = ({ route }) => {
     {/* You can change the size and color as per your requirement */}
   </View>:
 <>
-<View
-  
-  className="relative grow py-3 gap-y-3 ">
+<ScrollView className="relative grow py-3 gap-y-3 " showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
   
  
  
@@ -169,7 +167,7 @@ const Class = ({ route }) => {
       
       </Text>
       <TouchableOpacity onPress={()=>deleteClass(item.classId)}>
-      <MaterialCommunityIcons name="delete" size={28} color="#888"  />
+      <MaterialCommunityIcons name="delete" size={28} color="red"  />
       </TouchableOpacity>
       </View>
       <View className="flex-row justify-between items-center">
@@ -188,8 +186,8 @@ const Class = ({ route }) => {
  
  
  
- </View>
- <TouchableOpacity className="bg-primary self-center p-3 rounded-full" onPress={displaySchedule}>
+ </ScrollView>
+ <TouchableOpacity className="bg-primary self-center p-3 rounded-full my-2 " onPress={displaySchedule}>
  <AntDesign name="plus" size={22} color="#fff"  />
  </TouchableOpacity>
 

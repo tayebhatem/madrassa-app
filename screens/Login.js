@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity,Image, Alert,AppState, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
+import Loader from '../components/Loader'
+import Toast from 'react-native-toast-message'
+import { Formik } from 'formik'
+import * as yup from 'yup'
 AppState.addEventListener('change', (state) => {
   if (state === 'active') {
     supabase.auth.startAutoRefresh()
@@ -13,74 +17,66 @@ AppState.addEventListener('change', (state) => {
 })
 
 
-const Login = ({}) => {
-  const [email, setEmail] = useState('')
+const Login = () => {
+ 
+  
   const [loading,setLoading]=useState(false);
-  const [password, setPassword] = useState('')
   const [session, setSession] = useState(null)
-  const [wrongUser, setwrongUser] = useState(false);
-  const [errors, setErrors] = useState({}); 
-    const [isFormValid, setIsFormValid] = useState(false); 
+  const loginValidationSchema = yup.object().shape({
+    email: yup
+      .string()
+      .email("Entrer un email valide")
+      .required('Adresse email est nécessaire'),
+    password: yup
+      .string()
+      .min(6, ({ min }) => `Le mot de passe doit contenir au moins ${min} caractères`)
+      .required('Mot de passe requis'),
+  })
+    const showToast = (text,type) => {
   
-    const validateForm = () => { 
-        let errors = {}; 
-  
-       
-  
-        // Validate email field 
-        if (!email) { 
-            errors.email = 'Email est requis'; 
-        } else if (!/\S+@\S+\.\S+/.test(email)) { 
-            errors.email = 'Email est invalid.'; 
-        } 
-  
-        // Validate password field 
-        if (!password) { 
-            errors.password = 'Mot de pass est requis'; 
-        } else if (password.length < 6) { 
-            errors.password = 'Mot de passe doit être au moins de 6 caractères'; 
-        } 
-  
-        // Set the errors and update form validity 
-        setErrors(errors); 
-        setIsFormValid(Object.keys(errors).length === 0); 
-    }; 
+      Toast.show({
+        type: type,
+        text1: type,
+        text2: text
+      });
+    }
+    
+   
     const navigation=useNavigation();
     const[hiddePassword,setHiddePassword]=useState(true);
 
-    async function signInWithEmail() {
-     if(isFormValid){
+    async function signInWithEmail(values) {
+     
       setLoading(true)
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
+        email: values.email,
+        password: values.password,
       })
       if(error){
-        error.message==='Invalid login credentials'? setwrongUser(true):setwrongUser(false)
+        error.message==='Invalid login credentials' && showToast('Mauvais email ou mot de passe !','error')
         
         
       }else{
-      
-        navigation.navigate('Home');
-        setwrongUser(false);
-        setEmail('');
-        setPassword('');
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setSession(session)
+        })
     }
     
-     }
+     values.email=''
+     values.password=''
      setLoading(false);
     }
+   
+    
     useEffect(() => {
-      validateForm(); 
-    }, [email,password])
+      session && session.user &&  navigation.navigate('Home');
+    },[session])
     
   return (
+    <>
+   {loading && <Loader/>}
     <SafeAreaView className="flex-1 items-center  bg-white">
-   {
-    loading?<View className="grow justify-center">
-    <ActivityIndicator size="xlarge" color="#0245D1" />
-    {/* You can change the size and color as per your requirement */}
-  </View>:<>
+  
     <View className="bg-primary w-full rounded-b-3xl p-24 flex justify-center items-center ">
     <Image
         source={require('../assets/logo.png')}
@@ -90,37 +86,73 @@ const Login = ({}) => {
     </View>
       <View className="flex  p-3 gap-4">
       <Text className="text-3xl text-center font-bold py-3">Se conncter</Text>
-      <View className={wrongUser || (errors && errors.email)?"flex-row items-center gap-2 w-72 bg-gray-100 border border-red-500 pb-2 rounded-md shadow-md":"flex-row items-center gap-2 w-72 bg-gray-100 border border-gray-200 pb-2 rounded-md shadow-md"}>
-      <FontAwesome5 name="user-alt" size={18} color="#aaa"  />
-      <TextInput placeholder='Email' onChangeText={(text) => setEmail(text)} value={email} />
-      </View>
-     {
-      errors && errors.email  && <Text className="text-red-500">{errors.email}</Text>
-     }
-      <View className={wrongUser || (errors && errors.password)?"flex-row items-center gap-2 w-72 bg-gray-100 border border-red-500 pb-2 pr-1 rounded-md shadow-md":"flex-row items-center pr-1 gap-2 w-72 bg-gray-100 border border-gray-200 pb-2 rounded-md shadow-md"}>
-      <FontAwesome5 name="lock" size={18} color="#aaa"   />
-     <TextInput placeholder='Mot de pass'secureTextEntry={hiddePassword} className="grow" value={password} onChangeText={(text) => setPassword(text)}/>
-     {
+     
+      <Formik
+   validationSchema={loginValidationSchema}
+   initialValues={{ email: '', password: '' }}
+   onSubmit={values => signInWithEmail(values)}
+ >
+   {({
+     handleChange,
+     
+     handleSubmit,
+     values,
+     errors,
+     isValid,
+   }) => (
+   <View className='gap-2'>
+   <View className={(errors.email)?"flex-row items-center gap-2  bg-gray-100 border border-red-500 pb-2  rounded-md shadow-md"
+      :"flex-row items-center gap-2 mb-4 w-72 bg-gray-100 border border-gray-200 pb-2 rounded-md shadow-md"}>
+       <FontAwesome5 name="user-alt" size={18} color="#aaa"  />
+       <TextInput
+         name="email"
+         id='email'
+         placeholder='Email'
+        
+         onChangeText={handleChange('email')}
+        
+         value={values.email}
+         keyboardType="email-address"
+       />
+         </View>
+       {errors.email && <Text className="text-red-500">{errors.email}</Text>
+       }
+        <View className={errors.password ?"flex-row items-center gap-2  bg-gray-100 border border-red-500 pb-2 rounded-md shadow-md"
+      :"flex-row items-center gap-2  w-72 bg-gray-100 border border-gray-200 pb-2 rounded-md shadow-md"}>
+       <FontAwesome5 name="lock" size={18} color="#aaa" />
+       <TextInput
+         name="password"
+         placeholder="Mot de passe"
+        id='password'
+         onChangeText={handleChange('password')}
+        
+         value={values.password}
+         secureTextEntry={hiddePassword}
+         className='grow'
+       />
+        {
         hiddePassword?
-        <TouchableOpacity onPress={()=>setHiddePassword(false)}>
+        <TouchableOpacity onPress={()=>setHiddePassword(false)} className='px-2'>
         <FontAwesome5 name="eye" size={18} color="#aaa"/>
         </TouchableOpacity>:
         <TouchableOpacity onPress={()=>setHiddePassword(true)}>
-        <FontAwesome5 name="eye-slash" size={18} color="#aaa" />
+        <FontAwesome5 name="eye-slash" size={18} color="#aaa" className='px-2'/>
         </TouchableOpacity>
         
      }
-     </View>
-     {
-      errors && errors.password  && <Text className="text-red-500">{errors.password}</Text>
-     }
-       <Text className="font-medium text-primary">Mot de passe oublié ?</Text>
-       {
-        wrongUser && <Text className="text-center text-red-500">Mauvais email ou mot de passe !</Text>
+       </View>
+       {errors.password &&
+         <Text className="text-red-500">{errors.password}</Text>
        }
-      <TouchableOpacity className="bg-primary rounded-md shadow-md p-3" onPress={signInWithEmail} >
-        <Text className="text-white text-center font-semibold">Se connceter</Text>
+       <Text className="font-medium text-primary">Mot de passe oublié ?</Text>
+    
+      <TouchableOpacity className="bg-primary rounded-md shadow-md p-3" onPress={handleSubmit} >
+        <Text className="text-white text-center font-semibold ">Se connceter</Text>
       </TouchableOpacity>
+   </View>
+   )}
+ </Formik>
+      
       <View className="relative py-4 justify-center items-center">
         <View className="absolute w-full h-0.5 bg-gray-200 top-4 "></View>
           <Text className="absolute text-gray-400 bg-white     z-20">Ou </Text>
@@ -143,9 +175,11 @@ const Login = ({}) => {
       </View>
       
       </View>
-    </>
-   }
+   
+   <Toast/>
     </SafeAreaView>
+
+    </>
   )
 }
 

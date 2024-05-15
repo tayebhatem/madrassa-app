@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "madrassa-app",
+    "name": "madrassa",
     "slug": "madrassa-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0245D1"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -20,11 +20,22 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#0245D1"
+      },
+      "package": "com.tayebhatem.madrassaapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "@react-native-google-signin/google-signin"
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8b983a71-3751-4a16-a6a9-bb076691323c"
+      }
     }
   }
 }

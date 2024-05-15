@@ -4,11 +4,12 @@ import { FontAwesome, FontAwesome5, MaterialIcons } from '@expo/vector-icons'
 import ProfileLayout from '../components/ProfileLayout'
 import { supabase } from '../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
+import Login from './Login'
 
 const Profile = () => {
   const navigation=useNavigation();
   const [teacher,setTeacher]=useState(null)
-  const [session,setSession]=useState(null)
+  const [session,setSession]=useState()
   const fetchTeacher=(id)=>{
 supabase.from('teacherUser').select('*,teacher(*)').eq('userId',id).single().then(
   result=>{
@@ -25,7 +26,7 @@ supabase.from('teacherUser').select('*,teacher(*)').eq('userId',id).single().the
     supabase.auth.getSession().then(({ data: { session } }) => {
     
       if (!session) {
-        navigation.navigate('Login')
+        return <Login/>
       } else{
         setSession(session)
         fetchTeacher(session.user.id)
@@ -42,7 +43,7 @@ supabase.from('teacherUser').select('*,teacher(*)').eq('userId',id).single().the
    
   checkSession()
 
-  }, [])
+  }, [session])
   return (
     <ProfileLayout title={'Profile'}>
        <View className="absolute w-full ml-4 top-2/3 ">

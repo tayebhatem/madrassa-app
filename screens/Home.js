@@ -1,99 +1,218 @@
-import { View, Text,StyleSheet, TouchableOpacity, Alert } from 'react-native'
-import React, { useEffect } from 'react'
+import { View, Text,Dimensions, TouchableOpacity, ActivityIndicator,FlatList,Image } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
 
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
+import Animated from 'react-native-reanimated'
 
 const Home = () => {
+  const postSilder=useRef()
   const navigation=useNavigation();
-  
-  useEffect(() => {
-   
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      
-      if (!session && !session.user) {
-        navigation.navigate('Login');
-      } else {
-        try {
-          const { data, error } =  supabase
-          .from('teacherUser')
-          .select(`teacherId`)
-          .eq('userId', session.user.id)
-          .single()
-          
-        if (error) {
-          Alert.alert("error : "+error.message)
-        }else{
-          if(data===null){
-           navigation.navigate('Information')
+  const [loading,setLoading]=useState(true);
+  const[ posts,setPosts]=useState([]);
+  const [activeIndex,setActiveindex]=useState(0)
+  const [teacher,setTeacher]=useState()
+  const fetchPosts=(instituteId,userId)=>{
+      supabase.from('posts').select('*').eq('userId',instituteId).then(
+        result=>{
+          if(!result.error){
+               setPosts(result.data)
           }
         }
+      )
+  }
+  const postItems=({ item: postItem }) => (
+    <View className='w-screen pl-1     '>
+  <View className=" p-3 rounded-md bg-blue-600  shadow-lg shadow-black  mx-4        my-2 grow  "   >
+     <View className=' flex-row justify-between'>
+     <Text className=' text-white'>
+    {postItem.date}
+     </Text>
+     <View className="">
+   <FontAwesome name="bell" size={26} color="#FFF" />
+   </View>
+     </View>
+      <View className="grow truncate  ">
+     
+      <Text className="text-lg text-white   ">
+       {postItem.context}
+      
+      </Text>
+      </View>
+      
+      
+  
+  </View>
+    </View>
     
-        
-         } catch (error) {
-          if (error instanceof Error) {
-            Alert.alert(error.message)
-          }
-         }
+  );
+
+  const indicators=({ item: postItem,index:index }) => (
+
+      <View className={activeIndex===index?'w-3 h-3 rounded-full bg-blue-600 mx-1 self-center':'w-2 h-2 rounded-full bg-gray-300 mx-1 self-center'}>
+  
+    </View>
+    
+    
+  );
+
+  const haldleScroll=(e)=>{
+  const screenWidth=Dimensions.get('window').width
+  const scrolPosition=e.nativeEvent.contentOffset.x;
+  const index=Math.round(scrolPosition/screenWidth)
+  setActiveindex(index);
+  }
+  useEffect(()=>{
+
+    let intervel=setInterval(() => {
+      if(activeIndex===posts.length-1){
+     postSilder.current.scrollToIndex({index:0,Animated:true})
+      }else{
+        postSilder.current.scrollToIndex({index:activeIndex+1,Animated:true})
       }
+    },5000);
+
+    return ()=>clearInterval(intervel);
+
+
+  })
+  useEffect(() => {
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      
+      if (session && session.user) {
+        supabase.from('teacherUser')
+        .select('*,teacher(*)').eq('userId', session.user.id)
+        .single().then(
+          result=>{
+            if(!result.data){
+              navigation.navigate('Information');
+            }else{
+              setTeacher(result.data.teacher)
+              fetchPosts(result.data.teacher.instituteId,session.user.id);
+
+              setLoading(false);
+
+
+            }
+          }
+        );
+      } else{
+        navigation.navigate('Login')
+      }
+      
+      
     })
    
   }, [])
+
+  useEffect(()=>{
+   teacher && supabase
+    .channel('table-db')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'posts',
+      },
+      (payload) => setPosts(prevPosts => [...prevPosts, payload.new])
+         
+  
+    )
+    .subscribe();
+   },[])
   return (
-    <Layout title={'Accuil'}>
+  <>
+  {loading?
+    <View className="grow justify-center">
+    <ActivityIndicator size="xlarge" color="#0245D1" />
+   
+  </View>:<Layout title={'Accuil'}>
      
-<View className="h-1/4 p-3 rounded-md bg-blue-500 flex-row shadow-black shadow-lg" >
-    <View className="w-4/5">
-    <Text className="text-3xl text-white">Annulation</Text>
-    <Text className="text-lg text-white font-light ">Laborum quis adipisicing officia elit elit enim ut dolore ipsum mollit.</Text>
+    <View className='h-2/6' >
+   
+    <FlatList 
+    ref={postSilder}
+    className='flex-row gap-x-5 '
+   horizontal={true}
+  pagingEnabled={true}
+  onScrollAnimationEnd={true}
+showsHorizontalScrollIndicator={false}
+data={posts}
+renderItem={postItems}
+keyExtractor={(postItem) => postItem.postId}
+onScroll={haldleScroll}
+/>
+
+
+   
+
     </View>
-    
- <View className=" grow items-center justify-center">
- <FontAwesome name="bell" size={40} color="#fff" />
- </View>
-    
-</View>
+ {
+  posts.length>1 && <View  className='justify-center items-center py-1'>
+  <FlatList 
+   
+   horizontal={true}
+
+showsHorizontalScrollIndicator={false}
+data={posts}
+renderItem={indicators}
+keyExtractor={(postItem) => postItem.postId}
+/>
+  </View>
+ }
+ 
+     <View className="grow gap-y-4 mb-4 mt-1 ">
+     
+      
+
+     <View className='grow flex-row gap-x-2'>
+     <TouchableOpacity className="grow bg-white  shadow-lg shadow-black      items-center justify-center   " onPress={()=>navigation.navigate('Attendance')}>
+      <Image
+        source={require('../assets/attendance.png')}
+        style={{width:60,height:60,resizeMode:'cover'}}
+      />
+
+        <Text className=" font-medium text-gray-500   text-xl" >Présence</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity className="grow bg-white shadow-lg shadow-black    items-center justify-center  ">
+      <Image
+        source={require('../assets/icons8-document-50.png')}
+        style={{width:60,height:60,resizeMode:'cover'}}
+      />
+        <Text className=" font-medium text-gray-500 text-xl">Notes</Text>
+      </TouchableOpacity>
+     </View>
 
 
-<View className="grow  py-2   gap-y-2  ">
+    <View className='grow flex-row gap-x-2'>
+    <TouchableOpacity className="grow bg-white  shadow-lg shadow-black   items-center justify-center  ">
+    <Image
+        source={require('../assets/icons8-livre-50.png')}
+        style={{width:60,height:60,resizeMode:'cover'}}
+      />
+        <Text className="  text-gray-500 font-medium text-xl">Cours</Text>
+      </TouchableOpacity>
 
- <View className="grow flex-row gap-x-2">
- <TouchableOpacity className="w-1/2 bg-yellow-500 rounded-md shadow-black shadow-lg   p-3   items-center justify-center   " onPress={()=>navigation.navigate('Attendance')}>
- <FontAwesome name="qrcode" size={50} color="#fff" />
-   <Text className="capitalize font-medium text-white  text-2xl" >Présence</Text>
- </TouchableOpacity>
- <TouchableOpacity className="grow  bg-pink-500 rounded-md  p-3   items-center justify-center  ">
- <FontAwesome name="file-text-o" size={50} color="#fff" />
-   <Text className="  text-white font-medium text-2xl">Notes</Text>
- </TouchableOpacity>
- </View>
-<View className="grow flex-row gap-x-2">
-<TouchableOpacity className="grow bg-green-500 rounded-md  p-3   items-center justify-center  ">
- <FontAwesome name="clock-o" size={50} color="#fff" />
-   <Text className="  text-white font-medium text-2xl">Examen</Text>
- </TouchableOpacity>
- <TouchableOpacity className="grow bg-purple-500 rounded-md  p-3   items-center justify-center " onPress={()=>navigation.navigate('Schedule')}>
- <FontAwesome5 name="calendar-alt" size={50} color="#fff" />
-   <Text className="  text-white font-medium text-2xl">Emploi</Text>
- </TouchableOpacity>
-</View>
-</View>
-    </Layout>
+      <TouchableOpacity className="grow bg-white shadow-lg shadow-black     items-center justify-center " onPress={()=>navigation.navigate('Schedule')}>
+      <Image
+        source={require('../assets/icons8-heures-supplémentaires-50.png')}
+        style={{width:60,height:60,resizeMode:'cover'}}
+      />
+        <Text className="  text-gray-500 font-medium text-xl">Emploi</Text>
+      </TouchableOpacity>
+    </View>
+     
+     </View>
+         </Layout>
+  }
+  </>
   )
 
 }
-const styles = StyleSheet.create({
-    container: {
-        shadowColor: '#aaa',
-        shadowOffset: {
-          width: 0,
-          height: 0,
-        },
-        shadowOpacity: 0.6,
-        shadowRadius: 4,
-        elevation: 2,
-      },
-});
+
 export default Home

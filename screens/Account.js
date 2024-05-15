@@ -5,6 +5,7 @@ import ProfileLayout from '../components/ProfileLayout'
 import { supabase } from '../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
 import { subjects } from '../data/subjects'
+import Login from './Login'
 
 const Account = ({route}) => {
     const navigation=useNavigation();
@@ -22,7 +23,7 @@ const Account = ({route}) => {
               setInstitute(result.data)
           
             }else{
-              Alert.alert("error : "+result.error.message)
+             
             }
           }
         )
@@ -32,7 +33,7 @@ const Account = ({route}) => {
             supabase.auth.getSession().then(({ data: { session } }) => {
             
               if (!session) {
-                navigation.navigate('Login')
+                return <Login/>
               } else{
                 setSession(session)
                 fetchInstit();

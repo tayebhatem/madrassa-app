@@ -12,12 +12,16 @@ import Class from './screens/Class';
 import ScanAttendance from './screens/ScanAttendance';
 import Profile from './screens/Profile';
 import Account from './screens/Account';
+import Messages from './screens/Messages';
 
 
 
 const App = () => {
- 
+  
   const Stack=createNativeStackNavigator();
+  useEffect(()=>{
+  
+  },[])
   return (
     <SafeAreaProvider>
      <NavigationContainer>
@@ -68,11 +72,16 @@ const App = () => {
       options={{headerShown:false}}
     />
      <Stack.Screen
+      name='Messages'
+      component={Messages}
+      options={{headerShown:false}}
+    />
+     <Stack.Screen
       name='Account'
       component={Account}
       options={{headerShown:false}}
     />
-    
+   
     </Stack.Navigator>
   </NavigationContainer>
     </SafeAreaProvider>

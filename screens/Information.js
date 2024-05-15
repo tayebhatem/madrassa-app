@@ -3,21 +3,47 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Toast from 'react-native-toast-message'
+import Loader from '../components/Loader'
 
 const Information = () => {
-    const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(false);
     const navigation=useNavigation();
-    const [id, setId] = useState('')
-    const fetchTeacher=()=>{
-        supabase.from('teacher').select('teacherId',id).single().then(
-            result=>{
-                if(result.data){
-                    saveInfo();
-                }else{
-                    Alert.alert('no teacher with this id');
-                }
+    const [id, setId] = useState('');
+    const [session, setSession] = useState(null)
+    const showToast = (text) => {
+  
+      Toast.show({
+        type: 'error',
+        text1: 'error',
+        text2: text
+      });
+    }
+    const createAccount=()=>{
+     if(id){
+     try {
+      setLoading(true);
+
+      supabase.from('teacher').select('*').eq('teacherId',id).single().then(
+          result=>{
+             if(result.error){
+           showToast(result.error.message)
+             }else{
+              if(result.data){
+                saveInfo();
+            }else{
+             
+                showToast('Aucun enseignant avec cet identifiant');
+               
             }
-        )
+             }
+              setLoading(false);
+          }
+      )
+     } catch (error) {
+      showToast(error.message)
+     }
+     }
     }
     const saveInfo=()=>{
         supabase.from('teacherUser').insert({userId:session.user.id,teacherId:id}).then(
@@ -29,12 +55,19 @@ const Information = () => {
         )
     }
     useEffect(()=>{
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-          })
-    })
+
+       supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+         navigation.navigate('Login');
+        }else{
+          setSession(session);
+        }
+      })
+    },[])
   return (
-    <SafeAreaView className="flex-1 items-center  bg-white">
+    <>
+    {loading && <Loader/>}
+      <SafeAreaView className="flex-1 items-center  bg-white">
     <View className="bg-primary w-full rounded-b-3xl p-24 flex justify-center items-center ">
     <Image
         source={require('../assets/logo.png')}
@@ -42,15 +75,15 @@ const Information = () => {
       />
     </View>
       <View className="flex  p-3 gap-4">
-      <Text className="text-3xl text-center font-bold py-3">Information</Text>
-      <View className="flex-row items-center gap-2 w-72 bg-gray-100 pb-2 rounded-md shadow-md">
+      <Text className="text-2xl text-center font-medium py-3">Entrer votre identifiant</Text>
+      <View className="flex-row items-center gap-2 w-72 border border-gray-200 bg-gray-100 pb-2 rounded-md shadow-md">
       
-      <TextInput placeholder='ID' onChangeText={(text) => setId(text)} value={id} />
+      <TextInput placeholder='ID' onChangeText={(text) => setId(text)} value={id}  />
       </View>
 
       
       
-      <TouchableOpacity className="bg-primary rounded-md shadow-md p-3" onPress={fetchTeacher} >
+      <TouchableOpacity className="bg-primary rounded-md shadow-md p-3" onPress={createAccount} >
         <Text className="text-white text-center">Sauvgarder</Text>
       </TouchableOpacity>
       
@@ -58,7 +91,9 @@ const Information = () => {
       
       
       </View>
+      <Toast />
     </SafeAreaView>
+    </>
   )
 }
 
